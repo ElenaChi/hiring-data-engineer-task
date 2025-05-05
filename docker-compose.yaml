@@ -19,19 +19,19 @@ services:
       interval: 5s
       retries: 5
 
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   container_name: pgadmin
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@example.com
-  #     PGADMIN_DEFAULT_PASSWORD: admin
-  #     PGADMIN_CONFIG_SERVER_MODE: "False"
-  #   ports:
-  #     - "5050:80"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #       restart: true
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
 
   # -------------------------------------
   # ClickHouse
@@ -48,10 +48,28 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse_users.xml:/etc/clickhouse-server/users.d/users.xml
+      - ./etl/clickhouse/init_ch_create_analytical_schema.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
       interval: 5s
       retries: 5
+
+  # -------------------------------------
+  # ClickHouse Client
+  # -------------------------------------
+  clickhouse-client:
+    image: clickhouse/clickhouse-server
+    container_name: ch_client
+    platform: linux/arm64/v8
+    entrypoint: ["clickhouse-client"]
+    command: ["--host", "clickhouse"]
+    stdin_open: true
+    tty: true
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
 
   # -------------------------------------
   # Flyway Migrations
